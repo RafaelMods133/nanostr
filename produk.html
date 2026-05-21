@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Produk — NanoJS Store</title>
+<link rel="stylesheet" href="shared.css">
+</head>
+<body>
+
+<nav>
+  <a href="/" class="nav-logo"><div class="logo-dot"></div>Nano<span>JS</span></a>
+  <div class="nav-links">
+    <a href="/" class="nav-link">Home</a>
+    <a href="/produk" class="nav-link active">Produk</a>
+    <a href="/game" class="nav-link game">🎮 Akun Game</a>
+    <a href="/kontak" class="nav-link">Kontak</a>
+  </div>
+  <button class="nav-mobile-btn" onclick="toggleMenu()">☰</button>
+</nav>
+<div class="nav-mobile-menu" id="mobileMenu">
+  <a href="/" class="nav-link">Home</a>
+  <a href="/produk" class="nav-link active">Produk</a>
+  <a href="/game" class="nav-link game">🎮 Akun Game</a>
+  <a href="/kontak" class="nav-link">Kontak</a>
+</div>
+
+<div class="page-header">
+  <div class="page-header-glow" style="background:radial-gradient(ellipse,rgba(0,229,160,0.1) 0%,transparent 70%)"></div>
+  <div class="page-label" style="color:var(--accent)">Katalog</div>
+  <div class="page-title">Produk Digital</div>
+  <div class="page-desc">Streaming, VPN, Hosting, Email, dan layanan digital lainnya dengan harga terjangkau.</div>
+</div>
+
+<div class="section">
+  <div class="filter-bar" id="filterBar">
+    <button class="ftab active" onclick="filterBy('semua',this)">Semua</button>
+    <button class="ftab" onclick="filterBy('Streaming',this)">🎬 Streaming</button>
+    <button class="ftab" onclick="filterBy('VPN',this)">🛡️ VPN</button>
+    <button class="ftab" onclick="filterBy('Hosting',this)">🌐 Hosting</button>
+    <button class="ftab" onclick="filterBy('Email',this)">📧 Email</button>
+    <button class="ftab" onclick="filterBy('Lainnya',this)">📦 Lainnya</button>
+  </div>
+  <div class="grid" id="grid">
+    <div class="skel-card"><div class="skeleton skel-line skel-short" style="height:44px;width:44px;border-radius:12px;margin-bottom:1rem"></div><div class="skeleton skel-line skel-short"></div><div class="skeleton skel-line skel-med"></div><div class="skeleton skel-line skel-full"></div></div>
+    <div class="skel-card"><div class="skeleton skel-line skel-short" style="height:44px;width:44px;border-radius:12px;margin-bottom:1rem"></div><div class="skeleton skel-line skel-short"></div><div class="skeleton skel-line skel-med"></div><div class="skeleton skel-line skel-full"></div></div>
+    <div class="skel-card"><div class="skeleton skel-line skel-short" style="height:44px;width:44px;border-radius:12px;margin-bottom:1rem"></div><div class="skeleton skel-line skel-short"></div><div class="skeleton skel-line skel-med"></div><div class="skeleton skel-line skel-full"></div></div>
+  </div>
+</div>
+
+<footer>
+  <div class="footer-inner">
+    <div class="footer-brand"><div class="logo-dot"></div>Nano<span>JS</span></div>
+    <div class="footer-links"><a href="/">Home</a><a href="/produk">Produk</a><a href="/game">Akun Game</a><a href="/kontak">Kontak</a></div>
+  </div>
+  <div class="footer-copy">© 2025 NanoJS Store · Banjarmasin</div>
+</footer>
+
+<script type="module">
+import { db } from "./firebase-config.js";
+import { fmt } from "./firebase-config.js";
+import { ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const CAT_ICONS = {Streaming:'🎬',VPN:'🛡️',Hosting:'🌐',Email:'📧',Lainnya:'📦'};
+const WA = "6281234567890";
+let all = {}, activeFilter = 'semua';
+
+// Check URL param
+const urlKat = new URLSearchParams(location.search).get('kat');
+if(urlKat){ activeFilter = urlKat; document.querySelectorAll('.ftab').forEach(b=>{ b.classList.remove('active'); if(b.textContent.includes(urlKat)) b.classList.add('active'); }); }
+
+function render() {
+  const entries = Object.entries(all).filter(([k,p]) => activeFilter==='semua' || p.kat===activeFilter);
+  const grid = document.getElementById('grid');
+  if(!entries.length){ grid.innerHTML=`<div class="empty"><div class="empty-icon">📭</div><p>Belum ada produk di kategori ini.</p></div>`; return; }
+  grid.innerHTML = entries.map(([k,p],i)=>{
+    const icon = CAT_ICONS[p.kat]||'📦';
+    const sClass = p.status==='Aktif'?'s-aktif':p.status==='Terbatas'?'s-terbatas':'s-habis';
+    const canOrder = p.status!=='Habis';
+    return `<div class="pcard" style="animation-delay:${i*.06}s">
+      <div class="pcard-icon">${icon}</div>
+      <div class="pcard-cat">${p.kat}</div>
+      <div class="pcard-name">${p.nama}</div>
+      <div class="pcard-desc">${p.ket||'—'}</div>
+      <div class="pcard-footer">
+        <div class="pcard-price">${fmt(p.harga)}<small>${p.masa}</small></div>
+        <div class="pcard-right">
+          <div class="status-dot ${sClass}">${p.status}</div>
+          <a href="https://wa.me/${WA}?text=Halo%20NanoJS,%20saya%20mau%20order%20${encodeURIComponent(p.nama)}"
+             class="btn-order${canOrder?'':' off'}" ${canOrder?'target="_blank"':''}>
+            ${canOrder?'Order':'Habis'}
+          </a>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+window.filterBy = function(kat, btn) {
+  activeFilter = kat;
+  document.querySelectorAll('.ftab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+};
+
+onValue(ref(db,'products'), s => {
+  all = s.val()||{};
+  render();
+});
+</script>
+<script>function toggleMenu(){document.getElementById('mobileMenu').classList.toggle('open');}</script>
+</body>
+</html>

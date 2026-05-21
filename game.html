@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Akun Game — NanoJS Store</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+/* ── GAME CARD ── */
+.game-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;}
+.gcard{background:var(--card);border:1px solid rgba(167,139,250,0.15);border-radius:16px;overflow:hidden;cursor:pointer;transition:all .25s;animation:fadeUp .5s ease both;position:relative;}
+.gcard:hover{border-color:rgba(167,139,250,0.4);transform:translateY(-4px);box-shadow:0 20px 48px rgba(0,0,0,0.5);}
+.gcard-img{width:100%;height:160px;object-fit:cover;background:var(--bg3);display:block;position:relative;}
+.gcard-img img{width:100%;height:100%;object-fit:cover;transition:transform .3s;}
+.gcard:hover .gcard-img img{transform:scale(1.05);}
+.gcard-img-placeholder{width:100%;height:160px;background:linear-gradient(135deg,var(--bg3),#1a2436);display:flex;align-items:center;justify-content:center;font-size:48px;}
+.gcard-badge{position:absolute;top:10px;left:10px;background:rgba(8,12,16,0.85);backdrop-filter:blur(8px);border:1px solid rgba(167,139,250,0.3);color:var(--game);font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;font-family:var(--font-head);letter-spacing:.5px;}
+.gcard-status{position:absolute;top:10px;right:10px;font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;font-family:var(--font-head);}
+.gcs-aktif{background:rgba(0,229,160,0.9);color:#080c10;}
+.gcs-terbatas{background:rgba(240,165,0,0.9);color:#080c10;}
+.gcs-habis{background:rgba(80,80,80,0.9);color:#aaa;}
+.gcard-body{padding:1.1rem;}
+.gcard-game{font-size:11px;color:var(--game);text-transform:uppercase;letter-spacing:1.5px;font-weight:600;margin-bottom:4px;font-family:var(--font-head);}
+.gcard-name{font-family:var(--font-head);font-size:16px;font-weight:700;margin-bottom:6px;line-height:1.3;}
+.gcard-desc{font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:.875rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.gcard-footer{display:flex;align-items:center;justify-content:space-between;padding-top:.875rem;border-top:1px solid rgba(167,139,250,0.1);}
+.gcard-price{font-family:var(--font-head);font-size:18px;font-weight:800;color:var(--text);}
+.gcard-price small{font-size:11px;color:var(--text3);font-weight:400;display:block;}
+.btn-detail{background:var(--game-bg);border:1px solid rgba(167,139,250,0.3);color:var(--game);font-size:12px;font-weight:700;padding:7px 13px;border-radius:8px;cursor:pointer;font-family:var(--font-head);transition:all .2s;}
+.btn-detail:hover{background:var(--game);color:#080c10;}
+.btn-detail.off{background:rgba(255,255,255,0.03);border-color:var(--border);color:var(--text3);pointer-events:none;}
+
+/* ── DETAIL MODAL ── */
+.detail-modal .modal{max-width:600px;}
+.dm-img{width:100%;max-height:280px;object-fit:cover;border-radius:12px;margin-bottom:1.25rem;display:block;}
+.dm-img-placeholder{width:100%;height:200px;background:linear-gradient(135deg,var(--bg3),#1a2436);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:60px;margin-bottom:1.25rem;}
+.dm-game-tag{display:inline-flex;align-items:center;gap:6px;background:var(--game-bg);border:1px solid rgba(167,139,250,0.2);color:var(--game);font-size:11px;font-weight:600;padding:4px 12px;border-radius:20px;margin-bottom:.75rem;font-family:var(--font-head);text-transform:uppercase;letter-spacing:1px;}
+.dm-title{font-family:var(--font-head);font-size:22px;font-weight:800;margin-bottom:.5rem;letter-spacing:-.5px;}
+.dm-desc{font-size:14px;color:var(--text2);line-height:1.7;margin-bottom:1.25rem;}
+.dm-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:1.25rem;}
+.dm-info{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:.875rem 1rem;}
+.dm-info-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;font-weight:600;margin-bottom:4px;}
+.dm-info-val{font-size:14px;font-weight:600;color:var(--text);}
+.dm-price-row{display:flex;align-items:center;justify-content:space-between;padding-top:1rem;border-top:1px solid var(--border);flex-wrap:wrap;gap:10px;}
+.dm-price{font-family:var(--font-head);font-size:26px;font-weight:800;}
+.dm-price small{font-size:13px;color:var(--text3);font-weight:400;display:block;}
+.btn-order-game{background:var(--game);color:#080c10;font-family:var(--font-head);font-weight:700;font-size:14px;padding:12px 24px;border-radius:10px;border:none;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:8px;text-decoration:none;}
+.btn-order-game:hover{background:#c4b5fd;transform:translateY(-1px);}
+.btn-order-game.off{background:var(--bg3);color:var(--text3);pointer-events:none;cursor:not-allowed;}
+
+/* ── GAME FILTER ── */
+.ftab.game-tab.active{background:var(--game);color:#080c10;border-color:var(--game);}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="nav-logo"><div class="logo-dot"></div>Nano<span>JS</span></a>
+  <div class="nav-links">
+    <a href="/" class="nav-link">Home</a>
+    <a href="/produk" class="nav-link">Produk</a>
+    <a href="/game" class="nav-link game active">🎮 Akun Game</a>
+    <a href="/kontak" class="nav-link">Kontak</a>
+  </div>
+  <button class="nav-mobile-btn" onclick="toggleMenu()">☰</button>
+</nav>
+<div class="nav-mobile-menu" id="mobileMenu">
+  <a href="/" class="nav-link">Home</a>
+  <a href="/produk" class="nav-link">Produk</a>
+  <a href="/game" class="nav-link game active">🎮 Akun Game</a>
+  <a href="/kontak" class="nav-link">Kontak</a>
+</div>
+
+<div class="page-header">
+  <div class="page-header-glow" style="background:radial-gradient(ellipse,rgba(167,139,250,0.12) 0%,transparent 70%)"></div>
+  <div class="page-label" style="color:var(--game)">Akun Game</div>
+  <div class="page-title" style="color:var(--text)">Beli <span style="color:var(--game)">Akun Game</span></div>
+  <div class="page-desc">Akun game premium berbagai judul populer. Lengkap dengan screenshot dan detail akun.</div>
+</div>
+
+<div class="section">
+  <div class="filter-bar" id="filterBar">
+    <button class="ftab game-tab active" onclick="filterBy('semua',this)">Semua</button>
+  </div>
+  <div class="game-grid" id="grid">
+    <div class="skel-card"><div class="skeleton skel-img"></div><div class="skeleton skel-line skel-short"></div><div class="skeleton skel-line skel-med"></div><div class="skeleton skel-line skel-full"></div></div>
+    <div class="skel-card"><div class="skeleton skel-img"></div><div class="skeleton skel-line skel-short"></div><div class="skeleton skel-line skel-med"></div><div class="skeleton skel-line skel-full"></div></div>
+    <div class="skel-card"><div class="skeleton skel-img"></div><div class="skeleton skel-line skel-short"></div><div class="skeleton skel-line skel-med"></div><div class="skeleton skel-line skel-full"></div></div>
+  </div>
+</div>
+
+<footer>
+  <div class="footer-inner">
+    <div class="footer-brand"><div class="logo-dot"></div>Nano<span>JS</span></div>
+    <div class="footer-links"><a href="/">Home</a><a href="/produk">Produk</a><a href="/game">Akun Game</a><a href="/kontak">Kontak</a></div>
+  </div>
+  <div class="footer-copy">© 2025 NanoJS Store · Banjarmasin</div>
+</footer>
+
+<!-- DETAIL MODAL -->
+<div class="moverlay detail-modal" id="detailModal" onclick="if(event.target===this)closeDetail()">
+  <div class="modal">
+    <div class="mhead">
+      <h2 id="dm-title">Detail Akun</h2>
+      <button class="bclose" onclick="closeDetail()">×</button>
+    </div>
+    <div class="mbody" id="dm-body"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { db } from "./firebase-config.js";
+import { fmt } from "./firebase-config.js";
+import { ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const WA = "6281234567890";
+let all = {}, activeFilter = 'semua';
+
+function buildFilterTabs(data) {
+  const games = [...new Set(Object.values(data).map(p=>p.game).filter(Boolean))];
+  const bar = document.getElementById('filterBar');
+  bar.innerHTML = `<button class="ftab game-tab${activeFilter==='semua'?' active':''}" onclick="window._filter('semua',this)">Semua</button>` +
+    games.map(g=>`<button class="ftab game-tab${activeFilter===g?' active':''}" onclick="window._filter('${g}',this)">${g}</button>`).join('');
+}
+
+function render() {
+  const entries = Object.entries(all).filter(([k,p]) => activeFilter==='semua'||p.game===activeFilter);
+  const grid = document.getElementById('grid');
+  if(!entries.length){ grid.innerHTML=`<div class="empty"><div class="empty-icon">🎮</div><p>Belum ada akun game tersedia.</p></div>`; return; }
+  grid.innerHTML = entries.map(([k,p],i)=>{
+    const sClass = p.status==='Aktif'?'gcs-aktif':p.status==='Terbatas'?'gcs-terbatas':'gcs-habis';
+    const imgHtml = p.imageUrl
+      ? `<div class="gcard-img"><img src="${p.imageUrl}" alt="${p.nama}" loading="lazy"><div class="gcard-badge">${p.game||'Game'}</div><div class="gcard-status ${sClass}">${p.status}</div></div>`
+      : `<div class="gcard-img-placeholder">${gameEmoji(p.game)}<div class="gcard-badge" style="top:10px;left:10px;position:absolute">${p.game||'Game'}</div><div class="gcard-status ${sClass}" style="position:absolute;top:10px;right:10px">${p.status}</div></div>`;
+    const canOrder = p.status!=='Habis';
+    return `<div class="gcard" style="animation-delay:${i*.06}s" onclick="openDetail('${k}')">
+      ${imgHtml}
+      <div class="gcard-body">
+        <div class="gcard-game">${p.game||'—'}</div>
+        <div class="gcard-name">${p.nama}</div>
+        <div class="gcard-desc">${p.deskripsi||'—'}</div>
+        <div class="gcard-footer">
+          <div class="gcard-price">${fmt(p.harga)}<small>Stok: ${p.stok}</small></div>
+          <button class="btn-detail${canOrder?'':' off'}" onclick="event.stopPropagation();${canOrder?`orderGame('${k}')`:''}">
+            ${canOrder?'Lihat Detail':'Habis'}
+          </button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function gameEmoji(game='') {
+  const g = game.toLowerCase();
+  if(g.includes('mobile legend')||g.includes('ml')) return '⚔️';
+  if(g.includes('pubg')) return '🔫';
+  if(g.includes('valorant')) return '🎯';
+  if(g.includes('free fire')||g.includes('ff')) return '🔥';
+  if(g.includes('genshin')) return '✨';
+  if(g.includes('cod')) return '💥';
+  return '🎮';
+}
+
+window.openDetail = function(key) {
+  const p = all[key]; if(!p) return;
+  document.getElementById('dm-title').textContent = p.nama;
+  const canOrder = p.status !== 'Habis';
+  document.getElementById('dm-body').innerHTML = `
+    ${p.imageUrl
+      ? `<img class="dm-img" src="${p.imageUrl}" alt="${p.nama}">`
+      : `<div class="dm-img-placeholder">${gameEmoji(p.game)}</div>`}
+    <div class="dm-game-tag">🎮 ${p.game||'Game'}</div>
+    <div class="dm-title">${p.nama}</div>
+    <div class="dm-desc">${p.deskripsi||'Tidak ada deskripsi.'}</div>
+    <div class="dm-grid">
+      <div class="dm-info"><div class="dm-info-label">Status</div><div class="dm-info-val"><span class="badge b-${p.status.toLowerCase()}">${p.status}</span></div></div>
+      <div class="dm-info"><div class="dm-info-label">Stok</div><div class="dm-info-val">${p.stok} unit</div></div>
+      ${p.server?`<div class="dm-info"><div class="dm-info-label">Server</div><div class="dm-info-val">${p.server}</div></div>`:''}
+      ${p.garansi?`<div class="dm-info"><div class="dm-info-label">Garansi</div><div class="dm-info-val">${p.garansi}</div></div>`:''}
+    </div>
+    <div class="dm-price-row">
+      <div class="dm-price">${fmt(p.harga)}<small>per akun</small></div>
+      <a href="https://wa.me/6281234567890?text=Halo%20NanoJS,%20saya%20mau%20order%20akun%20${encodeURIComponent(p.game+' - '+p.nama)}"
+         class="btn-order-game${canOrder?'':' off'}" ${canOrder?'target="_blank"':''}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        ${canOrder?'Order via WA':'Stok Habis'}
+      </a>
+    </div>`;
+  document.getElementById('detailModal').classList.add('open');
+};
+
+window.closeDetail = function(){ document.getElementById('detailModal').classList.remove('open'); };
+
+window._filter = function(kat, btn) {
+  activeFilter = kat;
+  document.querySelectorAll('.ftab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+};
+
+onValue(ref(db,'games'), s => {
+  all = s.val()||{};
+  buildFilterTabs(all);
+  render();
+});
+</script>
+<script>function toggleMenu(){document.getElementById('mobileMenu').classList.toggle('open');}</script>
+</body>
+</html>

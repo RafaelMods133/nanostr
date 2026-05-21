@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NanoJS Admin</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+/* ── LAYOUT ── */
+body{overflow:hidden;}
+.layout{display:flex;height:100vh;}
+.sidebar{width:220px;flex-shrink:0;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:1.25rem 1rem;overflow-y:auto;}
+.main{flex:1;overflow-y:auto;padding:2rem;}
+
+/* ── LOGIN OVERLAY ── */
+#loginOverlay{position:fixed;inset:0;background:var(--bg);z-index:500;display:flex;align-items:center;justify-content:center;padding:1.5rem;}
+.login-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.03) 1px,transparent 1px);background-size:50px 50px;mask-image:radial-gradient(ellipse 70% 70% at 50% 50%,black 20%,transparent 100%);pointer-events:none;}
+.login-glow{position:absolute;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(0,229,160,0.07) 0%,transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;}
+.lbox{background:var(--bg2);border:1px solid var(--border2);border-radius:20px;padding:2.5rem 2rem;width:100%;max-width:380px;position:relative;animation:fadeUp .4s ease both;}
+.lbox::before{content:'';position:absolute;top:0;left:10%;right:10%;height:1px;background:linear-gradient(90deg,transparent,var(--accent2),transparent);}
+.llogo{font-family:var(--font-head);font-size:24px;font-weight:800;display:flex;align-items:center;gap:10px;margin-bottom:.4rem;}
+.llogo span{color:var(--accent);}
+.lsub{font-size:13px;color:var(--text3);margin-bottom:2rem;}
+.lfield{margin-bottom:14px;}
+.lfield label{display:block;font-size:12px;color:var(--text2);font-weight:500;margin-bottom:6px;}
+.iwrap{position:relative;}
+.iwrap input{width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px 14px 11px 40px;font-size:14px;font-family:var(--font-body);outline:none;transition:border-color .2s,box-shadow .2s;}
+.iwrap input:focus{border-color:rgba(0,229,160,0.45);box-shadow:0 0 0 3px rgba(0,229,160,0.07);}
+.iico{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:16px;pointer-events:none;opacity:.5;}
+.pwbtn{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:15px;opacity:.45;color:var(--text);padding:0;}
+.lerr{display:none;align-items:center;gap:8px;font-size:13px;padding:10px 14px;border-radius:8px;margin-bottom:14px;background:var(--danger-bg);border:1px solid rgba(255,90,90,0.2);color:var(--danger);}
+.lerr.show{display:flex;}
+.lockbox{display:none;border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:13px;text-align:center;background:var(--danger-bg);border:1px solid rgba(255,90,90,0.2);color:var(--danger);}
+.lockbox.show{display:block;}
+.atinfo{min-height:22px;margin-top:-8px;margin-bottom:10px;text-align:right;}
+.atbdg{display:inline-flex;align-items:center;gap:5px;background:var(--warning-bg);border:1px solid rgba(240,165,0,0.15);color:var(--warning);font-size:11px;padding:3px 10px;border-radius:20px;}
+.btnlogin{width:100%;background:var(--accent);color:#080c10;font-family:var(--font-head);font-weight:800;font-size:15px;padding:12px;border-radius:10px;border:none;cursor:pointer;transition:all .2s;margin-top:6px;}
+.btnlogin:hover:not(:disabled){background:#00f5b0;}
+.btnlogin:disabled{opacity:.5;cursor:not-allowed;}
+
+/* ── SIDEBAR ELEMENTS ── */
+.slogo{font-family:var(--font-head);font-size:19px;font-weight:800;display:flex;align-items:center;gap:8px;padding-bottom:1.25rem;border-bottom:1px solid var(--border);margin-bottom:1rem;}
+.slogo span{color:var(--accent);}
+.slbl{font-size:10px;font-weight:600;letter-spacing:1.5px;color:var(--text3);text-transform:uppercase;margin:1rem 0 .4rem .5rem;}
+.nitem{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;font-size:14px;color:var(--text2);cursor:pointer;transition:all .15s;text-decoration:none;margin-bottom:2px;background:none;border:none;width:100%;font-family:var(--font-body);}
+.nitem:hover{background:var(--bg3);color:var(--text);}
+.nitem.active{background:rgba(0,229,160,0.1);color:var(--accent);}
+.nitem.game-nav.active{background:var(--game-bg);color:var(--game);}
+.sbot{margin-top:auto;border-top:1px solid var(--border);padding-top:1rem;display:flex;flex-direction:column;gap:8px;}
+.uchip{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:8px;background:var(--bg3);border:1px solid var(--border);}
+.uav{width:30px;height:30px;border-radius:50%;background:rgba(0,229,160,0.15);border:1px solid rgba(0,229,160,0.25);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--accent);font-family:var(--font-head);flex-shrink:0;}
+.uname{font-size:13px;font-weight:500;}.urole{font-size:10px;color:var(--accent);text-transform:uppercase;letter-spacing:1px;font-weight:600;}
+.slink{display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:8px;background:rgba(0,229,160,0.08);border:1px solid rgba(0,229,160,0.15);color:var(--accent);font-size:13px;font-weight:500;cursor:pointer;text-decoration:none;transition:all .2s;}
+.slink:hover{background:rgba(0,229,160,0.15);}
+.boutlog{display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:8px;background:var(--danger-bg);border:1px solid rgba(255,90,90,0.15);color:var(--danger);font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;width:100%;font-family:var(--font-body);}
+.boutlog:hover{background:rgba(255,90,90,0.15);}
+
+/* ── TOPBAR ── */
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:2rem;flex-wrap:wrap;gap:1rem;}
+.ptitle{font-family:var(--font-head);font-size:22px;font-weight:800;letter-spacing:-.5px;}
+.ptitle span{color:var(--text3);font-size:14px;font-weight:400;font-family:var(--font-body);margin-left:8px;}
+.fb-badge{display:flex;align-items:center;gap:6px;font-size:11px;padding:5px 12px;border-radius:20px;background:var(--bg3);border:1px solid var(--border);color:var(--text3);}
+.fb-dot{width:6px;height:6px;border-radius:50%;background:var(--text3);}
+.fb-badge.ok .fb-dot{background:var(--accent);box-shadow:0 0 6px var(--accent);}
+.fb-badge.ok{color:var(--accent);}
+
+/* ── STATS ── */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:2rem;}
+.sc{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:.875rem 1rem;}
+.sc-lbl{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:5px;}
+.sc-val{font-family:var(--font-head);font-size:24px;font-weight:800;}
+.sc-sub{font-size:11px;color:var(--text3);margin-top:2px;}
+
+/* ── TOOLBAR ── */
+.toolbar{display:flex;gap:8px;margin-bottom:1.25rem;flex-wrap:wrap;align-items:center;}
+.toolbar input,.toolbar select{background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 12px;font-size:13px;font-family:var(--font-body);outline:none;transition:border-color .2s;}
+.toolbar input{flex:1;min-width:150px;}
+.toolbar input:focus,.toolbar select:focus{border-color:var(--border2);}
+.toolbar select option{background:var(--bg2);}
+.btnadd{background:var(--accent);color:#080c10;font-family:var(--font-head);font-weight:700;font-size:13px;padding:8px 16px;border-radius:8px;border:none;cursor:pointer;display:flex;align-items:center;gap:5px;transition:all .2s;white-space:nowrap;}
+.btnadd:hover{background:#00f5b0;}
+.btnadd.game{background:var(--game);}.btnadd.game:hover{background:#c4b5fd;}
+
+/* ── TABLE ── */
+.tcrd{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+.twrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:550px;}
+thead th{background:var(--bg3);padding:10px 12px;text-align:left;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--border);}
+tbody tr{border-bottom:1px solid var(--border);transition:background .15s;}
+tbody tr:last-child{border-bottom:none;}
+tbody tr:hover{background:var(--bg3);}
+tbody td{padding:10px 12px;vertical-align:middle;}
+.tdname strong{font-weight:500;display:block;font-size:13px;}
+.tdname small{font-size:11px;color:var(--text3);}
+.cpill{background:var(--bg3);border:1px solid var(--border);font-size:11px;padding:2px 8px;border-radius:20px;color:var(--text2);}
+.cpill.game{background:var(--game-bg);border-color:rgba(167,139,250,0.2);color:var(--game);}
+.pval{font-family:var(--font-head);font-weight:700;font-size:13px;}
+.bdg{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;}
+.bdg::before{content:'';width:5px;height:5px;border-radius:50%;}
+.b-aktif{background:rgba(0,229,160,0.1);color:var(--accent)}.b-aktif::before{background:var(--accent);}
+.b-terbatas{background:var(--warning-bg);color:var(--warning)}.b-terbatas::before{background:var(--warning);}
+.b-habis{background:rgba(255,255,255,0.04);color:var(--text3)}.b-habis::before{background:var(--text3);}
+.acts{display:flex;gap:5px;}
+.bico{width:28px;height:28px;border-radius:6px;background:transparent;border:1px solid var(--border);color:var(--text3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .15s;}
+.bico:hover{background:var(--bg3);color:var(--text);}
+.bico.del:hover{background:var(--danger-bg);color:var(--danger);}
+.erow td{padding:3rem 1rem;text-align:center;color:var(--text3);font-size:13px;}
+.game-thumb{width:40px;height:40px;border-radius:6px;object-fit:cover;background:var(--bg3);}
+.game-thumb-ph{width:40px;height:40px;border-radius:6px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:18px;}
+
+/* ── MODAL FIELDS ── */
+.moverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(5px);z-index:400;align-items:center;justify-content:center;padding:1rem;}
+.moverlay.open{display:flex;}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:18px;width:100%;max-width:480px;max-height:92vh;overflow-y:auto;animation:modalIn .2s ease;}
+.mhead{display:flex;align-items:center;justify-content:space-between;padding:1.5rem 1.5rem 0;}
+.mhead h2{font-family:var(--font-head);font-size:17px;font-weight:800;}
+.mbody{padding:1.25rem 1.5rem 1.5rem;}
+.bclose{background:none;border:1px solid var(--border);color:var(--text2);width:30px;height:30px;border-radius:7px;cursor:pointer;font-size:17px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.bclose:hover{background:var(--bg3);}
+.field{margin-bottom:12px;}
+.field label{display:block;font-size:12px;color:var(--text2);margin-bottom:5px;font-weight:500;}
+.field input,.field select,.field textarea{width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 12px;font-size:13px;font-family:var(--font-body);outline:none;transition:border-color .2s;}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:rgba(0,229,160,0.4);}
+.field textarea{height:70px;resize:vertical;}
+.field select option{background:var(--bg2);}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.mfoot{display:flex;justify-content:flex-end;gap:8px;margin-top:1.25rem;}
+.bcancel{background:transparent;border:1px solid var(--border2);color:var(--text2);font-size:13px;padding:8px 16px;border-radius:8px;cursor:pointer;}
+.bcancel:hover{background:var(--bg3);}
+.bsave{background:var(--accent);color:#080c10;font-family:var(--font-head);font-weight:700;font-size:13px;padding:8px 20px;border-radius:8px;border:none;cursor:pointer;transition:all .2s;}
+.bsave:hover{background:#00f5b0;}
+.bsave.game{background:var(--game);color:#080c10;}.bsave.game:hover{background:#c4b5fd;}
+.bsave:disabled{opacity:.6;cursor:not-allowed;}
+.falert{display:none;align-items:center;gap:8px;font-size:12px;color:var(--danger);background:var(--danger-bg);border:1px solid rgba(255,90,90,0.2);padding:8px 12px;border-radius:8px;margin-bottom:10px;}
+.falert.show{display:flex;}
+
+/* ── IMAGE URL PREVIEW ── */
+.img-preview{width:100%;height:140px;border-radius:10px;object-fit:cover;margin-top:8px;border:1px solid var(--border);display:none;background:var(--bg3);}
+.img-preview.show{display:block;}
+.img-hint{font-size:11px;color:var(--text3);margin-top:4px;}
+
+/* ── SESSION BAR ── */
+.sbar{position:fixed;bottom:0;left:220px;right:0;height:2px;background:var(--border);z-index:40;}
+.sfill{height:100%;background:var(--accent);transition:width 1s linear;}
+
+/* ── TABS ── */
+.page-tabs{display:flex;gap:4px;margin-bottom:1.5rem;}
+.ptab{padding:8px 18px;border-radius:8px;font-size:13px;font-weight:600;border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;transition:all .2s;font-family:var(--font-head);}
+.ptab:hover{background:var(--bg3);}
+.ptab.active{background:rgba(0,229,160,0.1);color:var(--accent);border-color:rgba(0,229,160,0.2);}
+.ptab.game.active{background:var(--game-bg);color:var(--game);border-color:rgba(167,139,250,0.2);}
+
+@media(max-width:768px){body{overflow:auto;}.layout{flex-direction:column;height:auto;}.sidebar{display:none;}.main{padding:1.25rem;}.sbar{left:0;}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN OVERLAY -->
+<div id="loginOverlay">
+  <div class="login-grid"></div>
+  <div class="login-glow"></div>
+  <div class="lbox">
+    <div class="llogo"><div class="logo-dot"></div>Nano<span>JS</span></div>
+    <div class="lsub">Panel Admin · Kelola produk & akun game</div>
+    <div class="lockbox" id="lockbox">🔒 Akun dikunci sementara.<br><span id="lockclock"></span></div>
+    <div class="lerr" id="lerr"><span>⚠️</span><span id="lerrmsg"></span></div>
+    <div class="lfield"><label>Username</label>
+      <div class="iwrap"><span class="iico">👤</span>
+        <input type="text" id="iUser" placeholder="Username admin" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+    </div>
+    <div class="lfield"><label>Password</label>
+      <div class="iwrap"><span class="iico">🔑</span>
+        <input type="password" id="iPass" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()">
+        <button class="pwbtn" id="pwbtn" onclick="togglePw()">👁️</button>
+      </div>
+    </div>
+    <div class="atinfo"><span id="atbdg"></span></div>
+    <button class="btnlogin" id="btnlogin" onclick="doLogin()">Masuk ke Dashboard</button>
+  </div>
+</div>
+
+<div class="layout">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="slogo"><div class="logo-dot"></div>Nano<span>JS</span></div>
+    <div class="slbl">Kelola</div>
+    <button class="nitem active" id="nav-produk" onclick="switchTab('produk')">📦 Produk Digital</button>
+    <button class="nitem game-nav" id="nav-game" onclick="switchTab('game')">🎮 Akun Game</button>
+    <div class="slbl">Pengaturan</div>
+    <button class="nitem" onclick="openChPw()">🔒 Ganti Password</button>
+    <div class="sbot">
+      <div class="uchip">
+        <div class="uav" id="uav">A</div>
+        <div><div class="uname" id="uname">Admin</div><div class="urole">Administrator</div></div>
+      </div>
+      <a href="/" target="_blank" class="slink">🌐 Lihat Toko</a>
+      <button class="boutlog" onclick="doLogout()">🚪 Keluar</button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <!-- PRODUK TAB -->
+    <div id="tab-produk">
+      <div class="topbar">
+        <div class="ptitle">Produk Digital <span id="pc-lbl"></span></div>
+        <div class="fb-badge" id="fb-badge"><div class="fb-dot"></div><span id="fb-lbl">Menghubungkan...</span></div>
+      </div>
+      <div class="stats" id="p-stats"></div>
+      <div class="toolbar">
+        <input type="text" id="p-srch" placeholder="🔍 Cari produk..." oninput="renderProduk()">
+        <select id="p-fkat" onchange="renderProduk()">
+          <option value="">Semua kategori</option>
+          <option>Streaming</option><option>VPN</option><option>Hosting</option><option>Email</option><option>Lainnya</option>
+        </select>
+        <button class="btnadd" onclick="openProdukModal()">＋ Tambah Produk</button>
+      </div>
+      <div class="tcrd"><div class="twrap">
+        <table>
+          <thead><tr><th>Nama</th><th>Kategori</th><th>Harga</th><th>Masa</th><th>Stok</th><th>Status</th><th>Aksi</th></tr></thead>
+          <tbody id="p-tbody"></tbody>
+        </table>
+      </div></div>
+    </div>
+
+    <!-- GAME TAB -->
+    <div id="tab-game" style="display:none">
+      <div class="topbar">
+        <div class="ptitle" style="color:var(--game)">🎮 Akun Game <span id="gc-lbl" style="color:var(--text3)"></span></div>
+        <div class="fb-badge ok"><div class="fb-dot"></div><span>Live · Firebase</span></div>
+      </div>
+      <div class="stats" id="g-stats"></div>
+      <div class="toolbar">
+        <input type="text" id="g-srch" placeholder="🔍 Cari akun game..." oninput="renderGame()">
+        <select id="g-fgame" onchange="renderGame()">
+          <option value="">Semua game</option>
+        </select>
+        <button class="btnadd game" onclick="openGameModal()">＋ Tambah Akun Game</button>
+      </div>
+      <div class="tcrd"><div class="twrap">
+        <table>
+          <thead><tr><th>Gambar</th><th>Nama</th><th>Game</th><th>Harga</th><th>Stok</th><th>Status</th><th>Aksi</th></tr></thead>
+          <tbody id="g-tbody"></tbody>
+        </table>
+      </div></div>
+    </div>
+  </main>
+</div>
+
+<div class="sbar"><div class="sfill" id="sfill"></div></div>
+
+<!-- PRODUK MODAL -->
+<div class="moverlay" id="prodMod">
+  <div class="modal">
+    <div class="mhead"><h2 id="pm-title">Tambah Produk</h2><button class="bclose" onclick="closeProdukModal()">×</button></div>
+    <div class="mbody">
+      <div class="field"><label>Nama Produk</label><input id="pf-nama" type="text" placeholder="cth: Netflix Premium 4K"></div>
+      <div class="field"><label>Kategori</label>
+        <select id="pf-kat"><option>Streaming</option><option>VPN</option><option>Hosting</option><option>Email</option><option>Lainnya</option></select>
+      </div>
+      <div class="frow">
+        <div class="field"><label>Harga (Rp)</label><input id="pf-harga" type="number" placeholder="50000"></div>
+        <div class="field"><label>Stok</label><input id="pf-stok" type="number" placeholder="10"></div>
+      </div>
+      <div class="field"><label>Masa Aktif</label><input id="pf-masa" type="text" placeholder="cth: 30 hari"></div>
+      <div class="field"><label>Status</label>
+        <select id="pf-status"><option>Aktif</option><option>Terbatas</option><option>Habis</option></select>
+      </div>
+      <div class="field"><label>Keterangan (opsional)</label><textarea id="pf-ket" placeholder="Info untuk pembeli..."></textarea></div>
+      <div class="mfoot">
+        <button class="bcancel" onclick="closeProdukModal()">Batal</button>
+        <button class="bsave" id="pm-save" onclick="saveProduk()">Simpan</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- GAME MODAL -->
+<div class="moverlay" id="gameMod">
+  <div class="modal">
+    <div class="mhead"><h2 id="gm-title">Tambah Akun Game</h2><button class="bclose" onclick="closeGameModal()">×</button></div>
+    <div class="mbody">
+      <div class="falert" id="gm-alert"><span>⚠️</span><span id="gm-alertmsg"></span></div>
+      <div class="frow">
+        <div class="field"><label>Nama Akun / ID</label><input id="gf-nama" type="text" placeholder="cth: Akun ML Sultan"></div>
+        <div class="field"><label>Nama Game</label><input id="gf-game" type="text" placeholder="cth: Mobile Legends"></div>
+      </div>
+      <div class="frow">
+        <div class="field"><label>Harga (Rp)</label><input id="gf-harga" type="number" placeholder="250000"></div>
+        <div class="field"><label>Stok</label><input id="gf-stok" type="number" placeholder="1"></div>
+      </div>
+      <div class="frow">
+        <div class="field"><label>Server (opsional)</label><input id="gf-server" type="text" placeholder="cth: Asia, Indonesia"></div>
+        <div class="field"><label>Garansi (opsional)</label><input id="gf-garansi" type="text" placeholder="cth: 3 hari"></div>
+      </div>
+      <div class="field"><label>Status</label>
+        <select id="gf-status"><option>Aktif</option><option>Terbatas</option><option>Habis</option></select>
+      </div>
+      <div class="field"><label>Deskripsi Akun</label><textarea id="gf-desk" placeholder="Detail akun: hero, skin, rank, item, dll..."></textarea></div>
+      <div class="field">
+        <label>🖼️ URL Gambar dari Imgur</label>
+        <input id="gf-img" type="url" placeholder="https://i.imgur.com/xxxxx.jpg" oninput="previewImg()">
+        <img id="gf-preview" class="img-preview" alt="preview">
+        <div class="img-hint">Upload gambar ke <a href="https://imgur.com/upload" target="_blank" style="color:var(--accent)">imgur.com/upload</a> → klik kanan gambar → "Copy image address" → paste di sini</div>
+      </div>
+      <div class="mfoot">
+        <button class="bcancel" onclick="closeGameModal()">Batal</button>
+        <button class="bsave game" id="gm-save" onclick="saveGame()">Simpan ke Toko</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CHANGE PASSWORD MODAL -->
+<div class="moverlay" id="chpwMod">
+  <div class="modal" style="max-width:400px">
+    <div class="mhead"><h2>🔒 Ganti Password</h2><button class="bclose" onclick="closeChPw()">×</button></div>
+    <div class="mbody">
+      <div class="falert" id="cp-alert"><span>⚠️</span><span id="cp-msg"></span></div>
+      <div class="field"><label>Password Lama</label><input type="password" id="cp-old" placeholder="Password saat ini"></div>
+      <div class="field"><label>Password Baru</label><input type="password" id="cp-new" placeholder="Minimal 6 karakter"></div>
+      <div class="field"><label>Konfirmasi</label><input type="password" id="cp-conf" placeholder="Ulangi password baru"></div>
+      <div class="mfoot">
+        <button class="bcancel" onclick="closeChPw()">Batal</button>
+        <button class="bsave" onclick="doChPw()">Simpan</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { db } from "./firebase-config.js";
+import { fmt } from "./firebase-config.js";
+import { ref, onValue, set, remove, push } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+// ── AUTH ──
+const CRED_KEY='nanojs_admin_v1', SESS_KEY='nanojs_sess', SESS_SEC=30*60, MAX_FAIL=5, LOCK_SEC=120;
+const getCreds=()=>{try{return JSON.parse(localStorage.getItem(CRED_KEY))||{u:'admin',p:'nanojs2025'};}catch{return{u:'admin',p:'nanojs2025'};}};
+const setCreds=c=>localStorage.setItem(CRED_KEY,JSON.stringify(c));
+const getSess=()=>{try{return JSON.parse(sessionStorage.getItem(SESS_KEY));}catch{return null;}};
+const setSess=u=>sessionStorage.setItem(SESS_KEY,JSON.stringify({u,t:Date.now()}));
+const clearSess=()=>sessionStorage.removeItem(SESS_KEY);
+const sessOk=s=>s&&(Date.now()-s.t)<SESS_SEC*1000;
+
+let fails=0,lockedTill=0,lockIv=null,sessIv=null,sessTo=null,sessStart=0;
+let prodData={},gameData={},editPKey=null,editGKey=null,curTab='produk';
+
+window.togglePw=()=>{const i=document.getElementById('iPass'),b=document.getElementById('pwbtn');i.type=i.type==='password'?'text':'password';b.textContent=i.type==='password'?'👁️':'🙈';};
+window.doLogin=async()=>{
+  if(Date.now()<lockedTill)return;
+  const u=document.getElementById('iUser').value.trim(),p=document.getElementById('iPass').value;
+  if(!u||!p){showLerr('Username dan password wajib diisi.');return;}
+  const btn=document.getElementById('btnlogin');btn.disabled=true;btn.textContent='Memverifikasi...';
+  await new Promise(r=>setTimeout(r,700+Math.random()*300));
+  const c=getCreds();
+  if(u===c.u&&p===c.p){fails=0;setSess(u);showDash(u);}
+  else{fails++;btn.disabled=false;btn.textContent='Masuk ke Dashboard';
+    if(fails>=MAX_FAIL)startLock();else{showLerr('Username atau password salah.');refreshAt();document.getElementById('iPass').value='';}}
+};
+function showLerr(m){document.getElementById('lerrmsg').textContent=m;document.getElementById('lerr').classList.add('show');setTimeout(()=>document.getElementById('lerr').classList.remove('show'),3500);}
+function refreshAt(){const e=document.getElementById('atbdg');e.innerHTML=fails>0&&fails<MAX_FAIL?`<span class="atbdg">⚠️ ${MAX_FAIL-fails} percobaan tersisa</span>`:'';}
+function startLock(){lockedTill=Date.now()+LOCK_SEC*1000;document.getElementById('btnlogin').disabled=true;document.getElementById('lerr').classList.remove('show');document.getElementById('atbdg').innerHTML='';document.getElementById('lockbox').classList.add('show');
+  function tick(){const r=Math.ceil((lockedTill-Date.now())/1000);if(r<=0){fails=0;lockedTill=0;document.getElementById('btnlogin').disabled=false;document.getElementById('lockbox').classList.remove('show');clearInterval(lockIv);}else document.getElementById('lockclock').textContent=`Coba lagi dalam ${r} detik.`;}
+  tick();lockIv=setInterval(tick,1000);}
+
+function showDash(username){
+  document.getElementById('loginOverlay').style.display='none';
+  document.getElementById('uname').textContent=username;
+  document.getElementById('uav').textContent=username[0].toUpperCase();
+  sessStart=Date.now();startSessBar();
+  onValue(ref(db,'products'),s=>{prodData=s.val()||{};document.getElementById('fb-badge').className='fb-badge ok';document.getElementById('fb-lbl').textContent='Live · Firebase';renderProduk();});
+  onValue(ref(db,'games'),s=>{gameData=s.val()||{};renderGame();updateGameFilter();});
+}
+
+window.doLogout=()=>{clearSess();clearTimeout(sessTo);clearInterval(sessIv);document.getElementById('loginOverlay').style.display='flex';document.getElementById('iUser').value='';document.getElementById('iPass').value='';document.getElementById('btnlogin').disabled=false;document.getElementById('btnlogin').textContent='Masuk ke Dashboard';showToast('Berhasil keluar');};
+
+function startSessBar(){clearInterval(sessIv);clearTimeout(sessTo);
+  function tick(){const p=Math.max(0,100-((Date.now()-sessStart)/(SESS_SEC*1000))*100);const f=document.getElementById('sfill');if(f)f.style.width=p+'%';}
+  tick();sessIv=setInterval(tick,1000);
+  sessTo=setTimeout(()=>{showToast('Sesi berakhir.',true);setTimeout(window.doLogout,2000);},SESS_SEC*1000);}
+
+// ── CHANGE PASSWORD ──
+window.openChPw=()=>{['cp-old','cp-new','cp-conf'].forEach(id=>document.getElementById(id).value='');document.getElementById('cp-alert').classList.remove('show');document.getElementById('chpwMod').classList.add('open');};
+window.closeChPw=()=>document.getElementById('chpwMod').classList.remove('open');
+window.doChPw=()=>{
+  const old=document.getElementById('cp-old').value,nw=document.getElementById('cp-new').value,cf=document.getElementById('cp-conf').value,c=getCreds();
+  const cpE=m=>{document.getElementById('cp-msg').textContent=m;document.getElementById('cp-alert').classList.add('show');};
+  if(old!==c.p){cpE('Password lama tidak sesuai.');return;}if(nw.length<6){cpE('Minimal 6 karakter.');return;}if(nw!==cf){cpE('Konfirmasi tidak cocok.');return;}
+  setCreds({...c,p:nw});closeChPw();showToast('Password berhasil diubah!');};
+
+// ── TABS ──
+window.switchTab=t=>{curTab=t;document.getElementById('tab-produk').style.display=t==='produk'?'block':'none';document.getElementById('tab-game').style.display=t==='game'?'block':'none';document.getElementById('nav-produk').className='nitem'+(t==='produk'?' active':'');document.getElementById('nav-game').className='nitem game-nav'+(t==='game'?' active':'');};
+
+// ── RENDER PRODUK ──
+window.renderProduk=()=>{
+  const tot=Object.keys(prodData).length,ak=Object.values(prodData).filter(p=>p.status==='Aktif').length,ha=Object.values(prodData).filter(p=>p.status==='Habis').length,ni=Object.values(prodData).reduce((s,p)=>s+(p.stok*p.harga),0);
+  document.getElementById('p-stats').innerHTML=`<div class="sc"><div class="sc-lbl">Total</div><div class="sc-val">${tot}</div></div><div class="sc"><div class="sc-lbl">Aktif</div><div class="sc-val" style="color:var(--accent)">${ak}</div></div><div class="sc"><div class="sc-lbl">Habis</div><div class="sc-val" style="color:var(--danger)">${ha}</div></div><div class="sc"><div class="sc-lbl">Nilai</div><div class="sc-val" style="font-size:16px">${fmt(ni)}</div></div>`;
+  document.getElementById('pc-lbl').textContent=`(${tot})`;
+  const q=document.getElementById('p-srch').value.toLowerCase(),kat=document.getElementById('p-fkat').value;
+  const list=Object.entries(prodData).filter(([k,p])=>(!q||p.nama.toLowerCase().includes(q))&&(!kat||p.kat===kat));
+  const tb=document.getElementById('p-tbody');
+  if(!list.length){tb.innerHTML=`<tr><td colspan="7" class="erow">📭 Belum ada produk</td></tr>`;return;}
+  tb.innerHTML=list.map(([k,p])=>`<tr><td class="tdname"><strong>${p.nama}</strong>${p.ket?`<small>${p.ket.substring(0,35)}...</small>`:''}</td><td><span class="cpill">${p.kat}</span></td><td><span class="pval">${fmt(p.harga)}</span></td><td style="font-size:12px;color:var(--text3)">${p.masa}</td><td style="color:${p.stok===0?'var(--danger)':p.stok<=3?'var(--warning)':'var(--text)'}"><b>${p.stok}</b></td><td><span class="bdg b-${p.status.toLowerCase()}">${p.status}</span></td><td><div class="acts"><button class="bico" onclick="openProdukModal('${k}')">✏️</button><button class="bico del" onclick="delProduk('${k}')">🗑️</button></div></td></tr>`).join('');};
+
+// ── PRODUK MODAL ──
+window.openProdukModal=key=>{editPKey=key||null;
+  if(editPKey){const p=prodData[editPKey];document.getElementById('pm-title').textContent='Edit Produk';document.getElementById('pf-nama').value=p.nama;document.getElementById('pf-kat').value=p.kat;document.getElementById('pf-harga').value=p.harga;document.getElementById('pf-stok').value=p.stok;document.getElementById('pf-masa').value=p.masa;document.getElementById('pf-status').value=p.status;document.getElementById('pf-ket').value=p.ket||'';}
+  else{document.getElementById('pm-title').textContent='Tambah Produk';['pf-nama','pf-harga','pf-stok','pf-masa','pf-ket'].forEach(id=>document.getElementById(id).value='');document.getElementById('pf-kat').value='Streaming';document.getElementById('pf-status').value='Aktif';}
+  document.getElementById('prodMod').classList.add('open');};
+window.closeProdukModal=()=>document.getElementById('prodMod').classList.remove('open');
+window.saveProduk=async()=>{
+  const nama=document.getElementById('pf-nama').value.trim();if(!nama){alert('Nama wajib diisi.');return;}
+  const data={nama,kat:document.getElementById('pf-kat').value,harga:parseInt(document.getElementById('pf-harga').value)||0,stok:parseInt(document.getElementById('pf-stok').value)||0,masa:document.getElementById('pf-masa').value.trim()||'-',status:document.getElementById('pf-status').value,ket:document.getElementById('pf-ket').value.trim()};
+  const btn=document.getElementById('pm-save');btn.disabled=true;btn.textContent='Menyimpan...';
+  try{if(editPKey)await set(ref(db,`products/${editPKey}`),{...prodData[editPKey],...data});else await set(push(ref(db,'products')),{...data,createdAt:Date.now()});closeProdukModal();showToast(editPKey?'Produk diperbarui!':'Produk ditambahkan!');}
+  catch(e){showToast('Error: '+e.message,true);}btn.disabled=false;btn.textContent='Simpan';};
+window.delProduk=async key=>{if(!confirm('Hapus produk ini?'))return;try{await remove(ref(db,`products/${key}`));showToast('Produk dihapus');}catch(e){showToast('Error',true);}};
+
+// ── RENDER GAME ──
+function updateGameFilter(){
+  const games=[...new Set(Object.values(gameData).map(p=>p.game).filter(Boolean))];
+  const sel=document.getElementById('g-fgame');const cur=sel.value;
+  sel.innerHTML='<option value="">Semua game</option>'+games.map(g=>`<option${cur===g?' selected':''}>${g}</option>`).join('');
+}
+window.renderGame=()=>{
+  const tot=Object.keys(gameData).length,ak=Object.values(gameData).filter(p=>p.status==='Aktif').length,ha=Object.values(gameData).filter(p=>p.status==='Habis').length;
+  document.getElementById('g-stats').innerHTML=`<div class="sc"><div class="sc-lbl">Total</div><div class="sc-val" style="color:var(--game)">${tot}</div></div><div class="sc"><div class="sc-lbl">Aktif</div><div class="sc-val" style="color:var(--accent)">${ak}</div></div><div class="sc"><div class="sc-lbl">Habis</div><div class="sc-val" style="color:var(--danger)">${ha}</div></div>`;
+  document.getElementById('gc-lbl').textContent=`(${tot})`;
+  const q=document.getElementById('g-srch').value.toLowerCase(),fg=document.getElementById('g-fgame').value;
+  const list=Object.entries(gameData).filter(([k,p])=>(!q||p.nama.toLowerCase().includes(q)||p.game.toLowerCase().includes(q))&&(!fg||p.game===fg));
+  const tb=document.getElementById('g-tbody');
+  if(!list.length){tb.innerHTML=`<tr><td colspan="7" class="erow">🎮 Belum ada akun game</td></tr>`;return;}
+  tb.innerHTML=list.map(([k,p])=>`<tr><td>${p.imageUrl?`<img class="game-thumb" src="${p.imageUrl}" alt="${p.nama}">`:`<div class="game-thumb-ph">🎮</div>`}</td><td class="tdname"><strong>${p.nama}</strong>${p.deskripsi?`<small>${p.deskripsi.substring(0,30)}...</small>`:''}</td><td><span class="cpill game">${p.game||'—'}</span></td><td><span class="pval">${fmt(p.harga)}</span></td><td style="color:${p.stok===0?'var(--danger)':'var(--text)'}"><b>${p.stok}</b></td><td><span class="bdg b-${p.status.toLowerCase()}">${p.status}</span></td><td><div class="acts"><button class="bico" onclick="openGameModal('${k}')">✏️</button><button class="bico del" onclick="delGame('${k}')">🗑️</button></div></td></tr>`).join('');};
+
+// ── GAME MODAL ──
+window.previewImg=()=>{const url=document.getElementById('gf-img').value.trim(),img=document.getElementById('gf-preview');if(url){img.src=url;img.classList.add('show');}else img.classList.remove('show');};
+window.openGameModal=key=>{editGKey=key||null;
+  document.getElementById('gm-alert').classList.remove('show');
+  if(editGKey){const p=gameData[editGKey];document.getElementById('gm-title').textContent='Edit Akun Game';document.getElementById('gf-nama').value=p.nama;document.getElementById('gf-game').value=p.game||'';document.getElementById('gf-harga').value=p.harga;document.getElementById('gf-stok').value=p.stok;document.getElementById('gf-server').value=p.server||'';document.getElementById('gf-garansi').value=p.garansi||'';document.getElementById('gf-status').value=p.status;document.getElementById('gf-desk').value=p.deskripsi||'';document.getElementById('gf-img').value=p.imageUrl||'';const img=document.getElementById('gf-preview');if(p.imageUrl){img.src=p.imageUrl;img.classList.add('show');}else img.classList.remove('show');}
+  else{document.getElementById('gm-title').textContent='Tambah Akun Game';['gf-nama','gf-game','gf-harga','gf-stok','gf-server','gf-garansi','gf-desk','gf-img'].forEach(id=>document.getElementById(id).value='');document.getElementById('gf-status').value='Aktif';document.getElementById('gf-preview').classList.remove('show');}
+  document.getElementById('gameMod').classList.add('open');};
+window.closeGameModal=()=>document.getElementById('gameMod').classList.remove('open');
+window.saveGame=async()=>{
+  const nama=document.getElementById('gf-nama').value.trim(),game=document.getElementById('gf-game').value.trim();
+  if(!nama||!game){document.getElementById('gm-alertmsg').textContent='Nama akun dan nama game wajib diisi.';document.getElementById('gm-alert').classList.add('show');return;}
+  const data={nama,game,harga:parseInt(document.getElementById('gf-harga').value)||0,stok:parseInt(document.getElementById('gf-stok').value)||0,status:document.getElementById('gf-status').value,deskripsi:document.getElementById('gf-desk').value.trim(),imageUrl:document.getElementById('gf-img').value.trim(),server:document.getElementById('gf-server').value.trim(),garansi:document.getElementById('gf-garansi').value.trim()};
+  const btn=document.getElementById('gm-save');btn.disabled=true;btn.textContent='Menyimpan...';
+  try{if(editGKey)await set(ref(db,`games/${editGKey}`),{...gameData[editGKey],...data});else await set(push(ref(db,'games')),{...data,createdAt:Date.now()});closeGameModal();showToast(editGKey?'Akun game diperbarui!':'Akun game ditambahkan ke toko! 🎮');}
+  catch(e){showToast('Error: '+e.message,true);}btn.disabled=false;btn.textContent='Simpan ke Toko';};
+window.delGame=async key=>{if(!confirm('Hapus akun game ini?'))return;try{await remove(ref(db,`games/${key}`));showToast('Akun game dihapus');}catch(e){showToast('Error',true);}};
+
+// ── MODAL CLOSE ON BACKDROP ──
+['prodMod','gameMod','chpwMod'].forEach(id=>document.getElementById(id).addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');}));
+
+// ── TOAST ──
+function showToast(msg,isErr=false){const t=document.getElementById('toast');t.innerHTML=(isErr?'':'✓ ')+msg;t.className='toast'+(isErr?' err':'')+' show';setTimeout(()=>t.classList.remove('show'),2800);}
+
+// ── INIT ──
+const s=getSess();
+if(sessOk(s))showDash(s.u);
+else{clearSess();document.getElementById('loginOverlay').style.display='flex';setTimeout(()=>document.getElementById('iUser').focus(),200);}
+</script>
+</body>
+</html>
