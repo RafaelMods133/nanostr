@@ -15,7 +15,7 @@ export const firebaseConfig = {
 export const app = initializeApp(firebaseConfig);
 export const db = getDatabase(app);
 
-export const WA_NUMBER = "6281234567890"; // ← Ganti nomor WhatsApp kamu
+export const WA_NUMBER = "6283160363382"; // ← Ganti nomor WhatsApp kamu
 
 export function fmt(n) {
   return "Rp " + Number(n).toLocaleString("id-ID");
